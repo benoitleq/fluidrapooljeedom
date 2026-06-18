@@ -48,10 +48,9 @@ $('#bt_testFluidraConnection').on('click', function () {
     $('#div_testResult').hide();
     $.ajax({
         type: 'POST',
-        url: 'core/ajax/plugin.ajax.php',
+        url: 'plugins/fluidrapool/core/php/fluidrapool.ajax.php',
         dataType: 'json',
         data: {
-            plugin:   'fluidrapool',
             action:   'testConnection',
             email:    $('.configKey[data-l1key=email]').val(),
             password: $('.configKey[data-l1key=password]').val()

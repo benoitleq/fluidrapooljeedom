@@ -2,194 +2,194 @@
 if (!isConnect('admin')) {
     throw new Exception('{{401 - Accès non autorisé}}');
 }
-$plugin = plugin::byId('fluidrapool');
-sendVarToJs('eqType', $plugin->getId());
+
+$plugin   = plugin::byId('fluidrapool');
+sendVarToJS('eqType', $plugin->getId());
 $eqLogics = eqLogic::byType($plugin->getId());
 ?>
 
 <div class="row row-overflow">
-    <!-- Panneau liste des équipements -->
-    <div class="col-lg-2 col-md-3 col-sm-4">
-        <div class="bs-sidebar">
-            <ul id="ul_eqLogic" class="nav nav-stacked">
-                <?php foreach ($eqLogics as $eqLogic) : ?>
-                    <li>
-                        <a class="list-group-item<?= ($eqLogic->getIsEnable() == 0) ? ' disabled' : '' ?>"
-                           id="<?= $eqLogic->getId() ?>">
-                            <?php if ($eqLogic->getImage() != '') : ?>
-                                <img class="lazy" data-original="<?= $eqLogic->getImage() ?>" src="img/img_loading.gif" />
-                            <?php else : ?>
-                                <i class="fas fa-swimming-pool"></i>
-                            <?php endif ?>
-                            <?= $eqLogic->getHumanName(true, true) ?>
-                        </a>
-                    </li>
-                <?php endforeach ?>
-            </ul>
-        </div>
 
-        <div class="btn-group-vertical" style="width:100%">
-            <a class="btn btn-success btn-sm" id="bt_discoverDevices">
-                <i class="fas fa-search"></i> {{Découvrir les appareils}}
-            </a>
-            <a class="btn btn-default btn-sm" id="bt_refreshAllEquipments">
-                <i class="fas fa-sync"></i> {{Tout rafraîchir}}
-            </a>
+    <!-- ─── Galerie des équipements ──────────────────────────────────── -->
+    <div class="col-xs-12 eqLogicThumbnailDisplay">
+        <legend><i class="fas fa-cog"></i> {{Gestion}}</legend>
+        <div class="eqLogicThumbnailContainer">
+            <div class="cursor eqLogicAction logoPrimary" data-action="add">
+                <i class="fas fa-plus-circle"></i>
+                <br>
+                <span>{{Ajouter}}</span>
+            </div>
+            <div class="cursor logoSecondary" id="bt_discoverDevices">
+                <i class="fas fa-search"></i>
+                <br>
+                <span>{{Découvrir}}</span>
+            </div>
+        </div>
+        <legend><i class="fas fa-swimming-pool"></i> {{Mes équipements Fluidra Pool}}</legend>
+        <div class="eqLogicThumbnailContainer">
+            <?php foreach ($eqLogics as $eqLogic) {
+                $opacity = $eqLogic->getIsEnable() ? '' : 'disableCard';
+                echo '<div class="eqLogicDisplayCard cursor ' . $opacity . '" data-eqLogic_id="' . $eqLogic->getId() . '">';
+                echo '<img src="' . $plugin->getPathImgIcon() . '" onerror="this.src=\'core/img/eqlogic.png\'"/>';
+                echo '<br/>';
+                echo '<span class="name">' . $eqLogic->getHumanName(true, true) . '</span>';
+                echo '</div>';
+            } ?>
         </div>
     </div>
 
-    <!-- Panneau configuration équipement -->
-    <div class="col-lg-10 col-md-9 col-sm-8 eqLogicThumbnailContainer">
+    <!-- ─── Fiche d'un équipement ─────────────────────────────────────── -->
+    <div class="col-xs-12 eqLogic" style="display:none;">
 
-        <legend><i class="fas fa-water"></i> {{Mes équipements Fluidra Pool}}</legend>
-
-        <?php
-        if (count($eqLogics) == 0) {
-            echo '<div class="alert alert-warning">';
-            echo '<i class="fas fa-info-circle"></i> ';
-            echo '{{Aucun équipement. Configurez vos identifiants dans la configuration du plugin, puis cliquez sur "Découvrir les appareils".}}';
-            echo '</div>';
-        }
-        ?>
-
-        <div class="eqLogicThumbnailDisplay">
-            <?php foreach ($eqLogics as $eqLogic) :
-                $deviceType = $eqLogic->getConfiguration('device_type', 'unknown');
-                $icons = [
-                    'pool'        => 'fa-swimming-pool',
-                    'pump'        => 'fa-water',
-                    'heat_pump'   => 'fa-thermometer-half',
-                    'light'       => 'fa-lightbulb',
-                    'chlorinator' => 'fa-flask',
-                    'sensor'      => 'fa-tachometer-alt',
-                ];
-                $icon = $icons[$deviceType] ?? 'fa-cogs';
-                ?>
-                <div class="cursor eqLogicDisplayCard<?= ($eqLogic->getIsEnable() == 0) ? ' opacity05' : '' ?>"
-                     data-eqlogic_id="<?= $eqLogic->getId() ?>">
-                    <center>
-                        <i class="fas <?= $icon ?> fa-3x"></i>
-                        <br/>
-                        <b><?= $eqLogic->getHumanName(true, true) ?></b>
-                        <br/>
-                        <small class="text-muted"><?= jeedom::toHumanReadable(translate::exec($deviceType, 'fluidrapool')) ?></small>
-                    </center>
-                </div>
-            <?php endforeach ?>
-        </div>
-
-        <!-- Formulaire de configuration d'un équipement -->
-        <div class="eqLogic" style="display:none;">
-            <div class="input-group pull-right" style="display:inline-flex">
-                <a class="btn btn-sm btn-default eqLogicAction roundedLeft" data-action="configure">
-                    <i class="fas fa-cogs"></i> {{Configuration avancée}}
+        <div class="input-group pull-right" style="display:inline-flex">
+            <span class="input-group-btn">
+                <a class="btn btn-default btn-sm eqLogicAction roundedLeft" data-action="configure">
+                    <i class="fa fa-cogs"></i> {{Configuration avancée}}
                 </a>
-                <a class="btn btn-sm btn-success eqLogicAction roundedRight" data-action="save">
+                <a class="btn btn-sm btn-success eqLogicAction" data-action="save">
                     <i class="fas fa-check-circle"></i> {{Sauvegarder}}
                 </a>
+                <a class="btn btn-danger btn-sm eqLogicAction roundedRight" data-action="remove">
+                    <i class="fas fa-minus-circle"></i> {{Supprimer}}
+                </a>
+            </span>
+        </div>
+
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation">
+                <a href="#" class="eqLogicAction" role="tab" data-action="returnToThumbnailDisplay">
+                    <i class="fa fa-arrow-circle-left"></i>
+                </a>
+            </li>
+            <li role="presentation" class="active">
+                <a href="#eqlogictab" role="tab" data-toggle="tab">
+                    <i class="fas fa-tachometer-alt"></i> {{Équipement}}
+                </a>
+            </li>
+            <li role="presentation">
+                <a href="#commandtab" role="tab" data-toggle="tab">
+                    <i class="fas fa-list-alt"></i> {{Commandes}}
+                </a>
+            </li>
+        </ul>
+
+        <div class="tab-content" style="height:calc(100% - 50px);overflow:auto;overflow-x:hidden;">
+
+            <!-- Onglet Équipement -->
+            <div role="tabpanel" class="tab-pane active" id="eqlogictab">
+                <br/>
+                <form class="form-horizontal">
+                    <fieldset>
+
+                        <legend><i class="fas fa-wrench"></i> {{Général}}</legend>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">{{Nom de l'équipement}}</label>
+                            <div class="col-sm-3">
+                                <input type="text" class="eqLogicAttr form-control" data-l1key="id" style="display:none;"/>
+                                <input type="text" class="eqLogicAttr form-control" data-l1key="name" placeholder="{{Ma piscine}}"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">{{Objet parent}}</label>
+                            <div class="col-sm-3">
+                                <select class="eqLogicAttr form-control" data-l1key="object_id">
+                                    <option value="">{{Aucun}}</option>
+                                    <?php foreach (jeeObject::all() as $object) {
+                                        echo '<option value="' . $object->getId() . '">' . $object->getName() . '</option>';
+                                    } ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">{{Catégorie}}</label>
+                            <div class="col-sm-9">
+                                <?php foreach (jeedom::getConfiguration('eqLogic:category') as $key => $value) {
+                                    echo '<label class="checkbox-inline">';
+                                    echo '<input type="checkbox" class="eqLogicAttr" data-l1key="category" data-l2key="' . $key . '"/> ' . $value['name'];
+                                    echo '</label>';
+                                } ?>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label"></label>
+                            <div class="col-sm-9">
+                                <label class="checkbox-inline">
+                                    <input type="checkbox" class="eqLogicAttr" data-l1key="isEnable" checked/> {{Activer}}
+                                </label>
+                                <label class="checkbox-inline">
+                                    <input type="checkbox" class="eqLogicAttr" data-l1key="isVisible" checked/> {{Visible}}
+                                </label>
+                            </div>
+                        </div>
+
+                        <legend><i class="fas fa-info-circle"></i> {{Informations Fluidra}}</legend>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">{{Type d'appareil}}</label>
+                            <div class="col-sm-3">
+                                <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="device_type" readonly/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">{{ID Piscine}}</label>
+                            <div class="col-sm-3">
+                                <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="pool_id" readonly/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">{{ID Appareil}}</label>
+                            <div class="col-sm-3">
+                                <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="device_id" readonly/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-sm-offset-3 col-sm-9">
+                                <a class="btn btn-default" id="bt_refreshEquipment">
+                                    <i class="fas fa-sync"></i> {{Rafraîchir cet équipement}}
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="div_fluidra_result" style="display:none;">
+                            <div class="col-sm-offset-3 col-sm-9">
+                                <span id="span_fluidra_result"></span>
+                            </div>
+                        </div>
+
+                    </fieldset>
+                </form>
             </div>
-            <ul class="nav nav-tabs" role="tablist">
-                <li role="presentation" class="active">
-                    <a href="#eqlogictab1" aria-controls="home" role="tab" data-toggle="tab">
-                        <i class="fas fa-cogs"></i> {{Equipement}}
-                    </a>
-                </li>
-                <li role="presentation">
-                    <a href="#eqlogictab2" aria-controls="profile" role="tab" data-toggle="tab">
-                        <i class="fas fa-list-alt"></i> {{Commandes}}
-                    </a>
-                </li>
-            </ul>
 
-            <div class="tab-content">
-                <!-- Onglet Équipement -->
-                <div role="tabpanel" class="tab-pane active" id="eqlogictab1">
-                    <br/>
-                    <div class="form-horizontal">
-                        <fieldset>
-                            <!-- Champs standards Jeedom (nom, objet, activer, visible) -->
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">{{Nom de l'équipement}}</label>
-                                <div class="col-sm-3">
-                                    <input type="text" class="eqLogicAttr form-control" data-l1key="id" style="display:none;" />
-                                    <input type="text" class="eqLogicAttr form-control" data-l1key="name" placeholder="{{Nom}}" />
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">{{Objet parent}}</label>
-                                <div class="col-sm-3">
-                                    <select class="eqLogicAttr listObject form-control" data-l1key="object_id">
-                                        <option value="">{{Aucun}}</option>
-                                        <?php foreach (jeeObject::all() as $object) : ?>
-                                            <option value="<?= $object->getId() ?>"><?= $object->getName() ?></option>
-                                        <?php endforeach ?>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">{{Activer}}</label>
-                                <div class="col-sm-1">
-                                    <input type="checkbox" class="eqLogicAttr" data-l1key="isEnable" />
-                                </div>
-                                <label class="col-sm-2 control-label">{{Visible}}</label>
-                                <div class="col-sm-1">
-                                    <input type="checkbox" class="eqLogicAttr" data-l1key="isVisible" />
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">{{Type d\'appareil}}</label>
-                                <div class="col-sm-3">
-                                    <select class="configKey form-control" data-l1key="device_type" disabled>
-                                        <option value="pool">{{Piscine (données globales)}}</option>
-                                        <option value="pump">{{Pompe}}</option>
-                                        <option value="heat_pump">{{Pompe à chaleur}}</option>
-                                        <option value="light">{{Éclairage}}</option>
-                                        <option value="chlorinator">{{Électrolyseur}}</option>
-                                        <option value="sensor">{{Sonde}}</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">{{ID Piscine}}</label>
-                                <div class="col-sm-3">
-                                    <input class="configKey form-control" data-l1key="pool_id" readonly />
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="col-sm-3 control-label">{{ID Appareil}}</label>
-                                <div class="col-sm-3">
-                                    <input class="configKey form-control" data-l1key="device_id" readonly />
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <div class="col-sm-offset-3 col-sm-3">
-                                    <a class="btn btn-primary" id="bt_refreshEquipment">
-                                        <i class="fas fa-sync"></i> {{Rafraîchir cet équipement}}
-                                    </a>
-                                </div>
-                            </div>
-                        </fieldset>
-                    </div>
-                </div>
-
-                <!-- Onglet Commandes -->
-                <div role="tabpanel" class="tab-pane" id="eqlogictab2">
-                    <br/>
-                    <table id="table_cmd" class="table table-bordered table-condensed">
-                        <thead>
-                            <tr>
-                                <th>{{Nom}}</th>
-                                <th>{{Type}}</th>
-                                <th>{{Valeur}}</th>
-                                <th>{{Options}}</th>
-                                <th>{{Actions}}</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+            <!-- Onglet Commandes -->
+            <div role="tabpanel" class="tab-pane" id="commandtab">
+                <a class="btn btn-success btn-sm cmdAction pull-right" data-action="add" style="margin-top:5px;">
+                    <i class="fa fa-plus-circle"></i> {{Ajouter une commande}}
+                </a><br/><br/>
+                <table id="table_cmd" class="table table-bordered table-condensed">
+                    <thead>
+                        <tr>
+                            <th>{{Id}}</th>
+                            <th>{{Nom}}</th>
+                            <th>{{Type}}</th>
+                            <th>{{Paramètres}}</th>
+                            <th>{{Etat}}</th>
+                            <th>{{Action}}</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
+
         </div>
     </div>
 </div>
+
+<?php include_file('desktop', 'fluidrapool', 'js', 'fluidrapool'); ?>
+<?php include_file('core', 'plugin.template', 'js'); ?>
