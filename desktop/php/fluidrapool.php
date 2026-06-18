@@ -29,10 +29,7 @@ $eqLogics = eqLogic::byType($plugin->getId());
         </div>
 
         <div class="btn-group-vertical" style="width:100%">
-            <a class="btn btn-default btn-sm eqLogicAction" data-action="add">
-                <i class="fas fa-plus-circle"></i> {{Ajouter}}
-            </a>
-            <a class="btn btn-default btn-sm" id="bt_discoverDevices">
+            <a class="btn btn-success btn-sm" id="bt_discoverDevices">
                 <i class="fas fa-search"></i> {{Découvrir les appareils}}
             </a>
             <a class="btn btn-default btn-sm" id="bt_refreshAllEquipments">

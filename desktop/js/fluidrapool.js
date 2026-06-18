@@ -39,24 +39,6 @@ $('.eqLogicAction[data-action="save"]').on('click', function () {
     });
 });
 
-/* Ajout d'un équipement */
-$('.eqLogicAction[data-action="add"]').on('click', function () {
-    var name = prompt('{{Nom du nouvel équipement :}}');
-    if (!name) return;
-    jeedom.eqLogic.save({
-        eqLogics: [{
-            name: name,
-            eqType_name: eqType,
-            isEnable: 1,
-            isVisible: 1
-        }],
-        success: function (result) {
-            toastr.success('{{Équipement créé}}');
-            window.location.reload();
-        }
-    });
-});
-
 /* Découverte automatique des appareils Fluidra */
 $('#bt_discoverDevices').on('click', function () {
     var btn = $(this);

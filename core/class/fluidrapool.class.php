@@ -62,8 +62,12 @@ class fluidrapool extends eqLogic {
         }
 
         $scriptPath = dirname(__FILE__) . '/../../resources/fluidra_api.py';
-        $tokenFile  = jeedom::getTmpFolder('fluidrapool') . '/token_cache.json';
-        $python     = self::getPythonPath();
+        $tmpDir     = jeedom::getTmpFolder('fluidrapool');
+        if (!is_dir($tmpDir)) {
+            mkdir($tmpDir, 0755, true);
+        }
+        $tokenFile = $tmpDir . '/token_cache.json';
+        $python    = self::getPythonPath();
 
         $cmdArgs = array_merge([
             escapeshellarg($python),
@@ -95,20 +99,27 @@ class fluidrapool extends eqLogic {
 
     public static function discoverDevices() {
         $data = self::callApi(['--action', 'get_all']);
-        if (!isset($data['pools'])) return;
+        if (!isset($data['pools']) || count($data['pools']) === 0) {
+            throw new Exception('Aucune piscine trouvée dans votre compte Fluidra Connect.');
+        }
+
+        $nbPools   = 0;
+        $nbDevices = 0;
 
         foreach ($data['pools'] as $pool) {
             $poolId   = $pool['id'];
             $poolName = $pool['name'] ?? "Piscine $poolId";
+            $nbPools++;
 
-            // Équipement niveau piscine (météo, statut, qualité eau)
             self::syncPoolEquipment($poolId, $poolName, $pool);
 
-            // Équipements par device (pompe, PAC, chlorinateur, lumière)
             foreach ($pool['devices'] ?? [] as $device) {
                 self::syncDeviceEquipment($poolId, $poolName, $device);
+                $nbDevices++;
             }
         }
+
+        return "{$nbPools} piscine(s) et {$nbDevices} appareil(s) configurés avec succès.";
     }
 
     private static function syncPoolEquipment($poolId, $poolName, $pool) {
