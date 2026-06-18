@@ -1,5 +1,4 @@
 <?php
-/* Point d'entrée AJAX pour le plugin Fluidra Pool */
 try {
     require_once dirname(__FILE__) . '/../../../../core/php/core.inc.php';
     include_file('core', 'authentification', 'php');
@@ -43,11 +42,9 @@ try {
             }
             $scriptPath = dirname(__FILE__) . '/../../resources/fluidra_api.py';
             $tokenFile  = jeedom::getTmpFolder('fluidrapool') . '/token_test.json';
-            $python     = 'python3';
             $cmd        = 'FLUIDRA_PASSWORD=' . escapeshellarg($password)
-                        . ' ' . escapeshellarg($python)
-                        . ' ' . escapeshellarg($scriptPath)
-                        . ' --email ' . escapeshellarg($email)
+                        . ' python3 ' . escapeshellarg($scriptPath)
+                        . ' --email '      . escapeshellarg($email)
                         . ' --token-file ' . escapeshellarg($tokenFile)
                         . ' --action get_all 2>/tmp/fluidrapool_test_error.log';
             $output = shell_exec($cmd);
@@ -57,18 +54,18 @@ try {
             }
             $data = json_decode($output, true);
             if (!$data || isset($data['error'])) {
-                ajax::error($data['error'] ?? 'Réponse invalide');
+                ajax::error($data['error'] ?? 'Réponse invalide du script');
             }
             $nbPools   = count($data['pools'] ?? []);
             $nbDevices = 0;
             foreach ($data['pools'] ?? [] as $pool) {
                 $nbDevices += count($pool['devices'] ?? []);
             }
-            ajax::success("Connexion réussie ! $nbPools piscine(s), $nbDevices appareil(s) trouvé(s).");
+            ajax::success("Connexion réussie ! {$nbPools} piscine(s), {$nbDevices} appareil(s) trouvé(s).");
             break;
 
         default:
-            throw new Exception("Action inconnue : $action");
+            throw new Exception("Action inconnue : {$action}");
     }
 } catch (Exception $e) {
     ajax::error(displayException($e), $e->getCode());

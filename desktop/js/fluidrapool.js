@@ -63,9 +63,8 @@ $('#bt_discoverDevices').on('click', function () {
     btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{Découverte en cours…}}');
     $.ajax({
         type: 'POST',
-        url: 'core/ajax/plugin.ajax.php',
+        url: 'plugins/fluidrapool/core/ajax/fluidrapool.ajax.php',
         data: {
-            plugin: 'fluidrapool',
             action: 'discoverDevices'
         },
         dataType: 'json',
@@ -92,9 +91,8 @@ $('#bt_refreshAllEquipments').on('click', function () {
     btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{Rafraîchissement…}}');
     $.ajax({
         type: 'POST',
-        url: 'core/ajax/plugin.ajax.php',
+        url: 'plugins/fluidrapool/core/ajax/fluidrapool.ajax.php',
         data: {
-            plugin: 'fluidrapool',
             action: 'refreshAll'
         },
         dataType: 'json',
@@ -117,9 +115,8 @@ $('#bt_refreshEquipment').on('click', function () {
     if (!id) { toastr.warning('{{Sauvegardez d\'abord l\'équipement}}'); return; }
     $.ajax({
         type: 'POST',
-        url: 'core/ajax/plugin.ajax.php',
+        url: 'plugins/fluidrapool/core/ajax/fluidrapool.ajax.php',
         data: {
-            plugin: 'fluidrapool',
             action: 'refreshEq',
             id: id
         },

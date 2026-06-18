@@ -43,20 +43,38 @@ if (!isConnect('admin')) {
 </form>
 <script>
 $('#bt_testFluidraConnection').on('click', function () {
+    var btn = $(this);
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Test en cours…');
+    $('#div_testResult').hide();
     $.ajax({
         type: 'POST',
-        url: 'index.php?v=d&plugin=fluidrapool&modal=testConnection',
+        url: 'plugins/fluidrapool/core/ajax/fluidrapool.ajax.php',
+        dataType: 'json',
         data: {
+            action: 'testConnection',
             email: $('.configKey[data-l1key=email]').val(),
             password: $('.configKey[data-l1key=password]').val()
         },
         success: function (data) {
             $('#div_testResult').show();
             if (data.state === 'ok') {
-                $('#testResultContent').removeClass('alert-danger').addClass('alert-success').html('<i class="fas fa-check"></i> ' + data.result);
+                $('#testResultContent')
+                    .removeClass('alert-danger').addClass('alert-success')
+                    .html('<i class="fas fa-check-circle"></i> ' + data.result);
             } else {
-                $('#testResultContent').removeClass('alert-success').addClass('alert-danger').html('<i class="fas fa-times"></i> ' + data.result);
+                $('#testResultContent')
+                    .removeClass('alert-success').addClass('alert-danger')
+                    .html('<i class="fas fa-times-circle"></i> ' + data.result);
             }
+        },
+        error: function (jqXHR) {
+            $('#div_testResult').show();
+            $('#testResultContent')
+                .removeClass('alert-success').addClass('alert-danger')
+                .html('<i class="fas fa-times-circle"></i> Erreur : ' + jqXHR.responseText);
+        },
+        complete: function () {
+            btn.prop('disabled', false).html('<i class="fas fa-plug"></i> {{Tester la connexion}}');
         }
     });
 });
