@@ -231,7 +231,8 @@ class fluidrapool extends eqLogic {
         self::getOrCreateCmd($eqLogic, 'hp_status',       '{{Etat PAC}}',               'info',   'binary');
         self::getOrCreateCmd($eqLogic, 'hp_state',        '{{Mode de fonctionnement}}',  'info',   'string');
         self::getOrCreateCmd($eqLogic, 'hp_target_temp',  '{{Température consigne}}',    'info',   'numeric', ['unite' => '°C']);
-        self::getOrCreateCmd($eqLogic, 'hp_current_temp', '{{Température actuelle}}',    'info',   'numeric', ['unite' => '°C']);
+        self::getOrCreateCmd($eqLogic, 'hp_current_temp', '{{Température eau}}',         'info',   'numeric', ['unite' => '°C']);
+        self::getOrCreateCmd($eqLogic, 'hp_air_temp',     '{{Température air}}',         'info',   'numeric', ['unite' => '°C']);
         self::getOrCreateCmd($eqLogic, 'hp_mode',         '{{Mode (chauffe/refroid)}}',  'info',   'string');
         self::getOrCreateCmd($eqLogic, 'hp_preset',       '{{Preset}}',                  'info',   'string');
         self::getOrCreateCmd($eqLogic, 'hp_on',           '{{Marche PAC}}',              'action', 'other');
@@ -309,13 +310,19 @@ class fluidrapool extends eqLogic {
             $this->checkAndUpdateCmd('pool_location', $loc);
         }
 
-        // Qualité eau depuis telemetry
+        // Température eau depuis status_data.waterTemperature
+        $waterTempData = $statusData['waterTemperature'] ?? [];
+        if (($waterTempData['status'] ?? '') === 'ok' && isset($waterTempData['value'])) {
+            $this->checkAndUpdateCmd('water_temp', $waterTempData['value']);
+        }
+
+        // Qualité eau (telemetry ou status_data)
         $wq = $pool['water_quality'] ?? [];
         if (!empty($wq)) {
-            $this->checkAndUpdateCmd('water_ph',       $wq['ph'] ?? '');
-            $this->checkAndUpdateCmd('water_orp',      $wq['orp'] ?? '');
-            $this->checkAndUpdateCmd('water_temp',     $wq['temperature'] ?? '');
-            $this->checkAndUpdateCmd('water_salinity', $wq['salinity'] ?? '');
+            if (isset($wq['ph']))          $this->checkAndUpdateCmd('water_ph',       $wq['ph']);
+            if (isset($wq['orp']))         $this->checkAndUpdateCmd('water_orp',      $wq['orp']);
+            if (isset($wq['temperature'])) $this->checkAndUpdateCmd('water_temp',     $wq['temperature']);
+            if (isset($wq['salinity']))    $this->checkAndUpdateCmd('water_salinity', $wq['salinity']);
         }
 
         $this->setStatus(true);
@@ -391,18 +398,26 @@ class fluidrapool extends eqLogic {
         $presetVal  = $comp17['reportedValue'] ?? $comp14['reportedValue'] ?? null;
         $presetStr  = $presetVal !== null ? (self::HP_PRESETS[$presetVal] ?? 'unknown') : 'unknown';
 
-        $stateMap = [0 => 'idle', 2 => 'heating', 3 => 'cooling', 11 => 'no_flow'];
+        $stateMap = [0 => 'idle', 2 => 'heating', 3 => 'cooling', 11 => 'no_flow', 12 => 'running'];
         $stateVal = $comp61['reportedValue'] ?? null;
-        $stateStr = $stateVal !== null ? ($stateMap[$stateVal] ?? 'unknown') : 'unknown';
+        $stateStr = $stateVal !== null ? ($stateMap[$stateVal] ?? 'state_' . $stateVal) : 'unknown';
 
-        $currentTemp = $device['current_temperature'] ?? $device['water_temperature'] ?? null;
+        // comp 37 = température eau (×10), comp 40 = température air (×10)
+        $comp37 = $components['37'] ?? [];
+        $comp40 = $components['40'] ?? [];
+        $waterTempRaw = $comp37['reportedValue'] ?? null;
+        $airTempRaw   = $comp40['reportedValue'] ?? null;
+        $currentTemp  = $waterTempRaw !== null ? round($waterTempRaw / 10, 1)
+                      : ($device['current_temperature'] ?? $device['water_temperature'] ?? null);
+        $airTemp      = $airTempRaw !== null ? round($airTempRaw / 10, 1) : null;
 
         $this->checkAndUpdateCmd('hp_status',       $isOn);
         $this->checkAndUpdateCmd('hp_state',        $stateStr);
         $this->checkAndUpdateCmd('hp_mode',         $modeStr);
         $this->checkAndUpdateCmd('hp_preset',       $presetStr);
         if ($targetTemp !== null)  $this->checkAndUpdateCmd('hp_target_temp',  $targetTemp);
-        if ($currentTemp !== null) $this->checkAndUpdateCmd('hp_current_temp', round($currentTemp, 1));
+        if ($currentTemp !== null) $this->checkAndUpdateCmd('hp_current_temp', $currentTemp);
+        if ($airTemp !== null)     $this->checkAndUpdateCmd('hp_air_temp',     $airTemp);
     }
 
     private function applyLightState($device, $components) {

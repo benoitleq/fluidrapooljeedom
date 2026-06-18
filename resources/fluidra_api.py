@@ -262,7 +262,8 @@ def get_component_state(device_id: str, component_id: int, cache: dict) -> dict:
 
 def get_device_components(device_id: str, cache: dict) -> dict:
     """Récupère les composants clés d'un device (PAC, pompe)."""
-    important_components = [9, 10, 11, 13, 14, 15, 16, 17, 21, 61]
+    # 2=device_type, 9-21=controls, 37=water_temp, 40=air_temp, 61=state
+    important_components = [2, 9, 10, 11, 13, 14, 15, 16, 17, 18, 20, 21, 37, 40, 61]
     components = {}
     for comp_id in important_components:
         state = get_component_state(device_id, comp_id, cache)
@@ -334,6 +335,10 @@ def action_get_all(cache: dict) -> dict:
             did = device["device_id"]
             if did and device["online"]:
                 device["components"] = get_device_components(did, cache)
+                # Correction du type si comp 2 = "hpc" (Heat Pump Controller)
+                comp2_val = device["components"].get("2", {}).get("reportedValue", "")
+                if comp2_val == "hpc":
+                    device["type"] = "heat_pump"
 
         pool_entry = {
             "id":          pool_id,
