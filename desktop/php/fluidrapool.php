@@ -110,8 +110,35 @@ $eqLogics = eqLogic::byType($plugin->getId());
                     <br/>
                     <div class="form-horizontal">
                         <fieldset>
-                            <!-- Paramètres standards Jeedom -->
-                            <?php include_file('desktop', 'eqLogic', 'php'); ?>
+                            <!-- Champs standards Jeedom (nom, objet, activer, visible) -->
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">{{Nom de l'équipement}}</label>
+                                <div class="col-sm-3">
+                                    <input type="text" class="eqLogicAttr form-control" data-l1key="id" style="display:none;" />
+                                    <input type="text" class="eqLogicAttr form-control" data-l1key="name" placeholder="{{Nom}}" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">{{Objet parent}}</label>
+                                <div class="col-sm-3">
+                                    <select class="eqLogicAttr listObject form-control" data-l1key="object_id">
+                                        <option value="">{{Aucun}}</option>
+                                        <?php foreach (jeeObject::all() as $object) : ?>
+                                            <option value="<?= $object->getId() ?>"><?= $object->getName() ?></option>
+                                        <?php endforeach ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-3 control-label">{{Activer}}</label>
+                                <div class="col-sm-1">
+                                    <input type="checkbox" class="eqLogicAttr" data-l1key="isEnable" />
+                                </div>
+                                <label class="col-sm-2 control-label">{{Visible}}</label>
+                                <div class="col-sm-1">
+                                    <input type="checkbox" class="eqLogicAttr" data-l1key="isVisible" />
+                                </div>
+                            </div>
 
                             <div class="form-group">
                                 <label class="col-sm-3 control-label">{{Type d\'appareil}}</label>
