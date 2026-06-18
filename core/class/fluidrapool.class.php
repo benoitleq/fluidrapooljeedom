@@ -545,6 +545,178 @@ class fluidrapool extends eqLogic {
         }
     }
 
+    // ------ Widget dashboard (toHtml) ------
+
+    public function toHtml($_version = 'dashboard') {
+        if ($this->getConfiguration('device_type', '') !== 'heat_pump') {
+            return parent::toHtml($_version);
+        }
+
+        // Commandes info
+        $cmdWaterTemp   = $this->getCmd(null, 'hp_current_temp');
+        $cmdAirTemp     = $this->getCmd(null, 'hp_air_temp');
+        $cmdTargetTemp  = $this->getCmd(null, 'hp_target_temp');
+        $cmdPreset      = $this->getCmd(null, 'hp_preset');
+        $cmdStatus      = $this->getCmd(null, 'hp_status');
+        $cmdState       = $this->getCmd(null, 'hp_state');
+        // Commandes action
+        $cmdSetTemp     = $this->getCmd(null, 'hp_set_temp');
+        $cmdPresetSil   = $this->getCmd(null, 'hp_preset_silence');
+        $cmdPresetSmart = $this->getCmd(null, 'hp_preset_smart');
+        $cmdPresetBoost = $this->getCmd(null, 'hp_preset_boost');
+        $cmdOn          = $this->getCmd(null, 'hp_on');
+        $cmdOff         = $this->getCmd(null, 'hp_off');
+
+        // Valeurs courantes
+        $waterTemp  = is_object($cmdWaterTemp)  ? $cmdWaterTemp->execCmd()         : '--';
+        $airTemp    = is_object($cmdAirTemp)    ? $cmdAirTemp->execCmd()           : '--';
+        $targetTemp = is_object($cmdTargetTemp) ? (float)$cmdTargetTemp->execCmd() : 27.0;
+        $preset     = is_object($cmdPreset)     ? $cmdPreset->execCmd()            : '';
+        $isOn       = is_object($cmdStatus)     ? (int)$cmdStatus->execCmd()       : 0;
+        $state      = is_object($cmdState)      ? $cmdState->execCmd()             : 'unknown';
+
+        // IDs pour le JS
+        $idSetTemp     = is_object($cmdSetTemp)     ? intval($cmdSetTemp->getId())     : 0;
+        $idPresetSil   = is_object($cmdPresetSil)   ? intval($cmdPresetSil->getId())   : 0;
+        $idPresetSmart = is_object($cmdPresetSmart) ? intval($cmdPresetSmart->getId()) : 0;
+        $idPresetBoost = is_object($cmdPresetBoost) ? intval($cmdPresetBoost->getId()) : 0;
+        $idOn          = is_object($cmdOn)          ? intval($cmdOn->getId())          : 0;
+        $idOff         = is_object($cmdOff)         ? intval($cmdOff->getId())         : 0;
+        $idTargetTemp  = is_object($cmdTargetTemp)  ? intval($cmdTargetTemp->getId())  : 0;
+
+        // État → couleur + libellé
+        $stateMap = [
+            'running' => ['Chauffage en cours', '#4caf50'],
+            'heating' => ['Chauffage',           '#ff7043'],
+            'cooling' => ['Refroidissement',     '#29b6f6'],
+            'idle'    => ['Veille',              '#9e9e9e'],
+            'no_flow' => ['Pas d\'eau',          '#ff9800'],
+            'unknown' => ['Inconnu',             '#666666'],
+        ];
+        [$stateLabel, $stateColor] = $stateMap[$state] ?? [$state, '#aaaaaa'];
+
+        // Preset actif
+        $pActive = ['silence' => $preset === 'silence', 'smart' => $preset === 'smart', 'boost' => $preset === 'boost'];
+
+        // ── Styles ─────────────────────────────────────────────────────────────
+        $S_CARD  = 'background:#15191f;border-radius:14px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.5);width:290px;';
+        $S_HDR   = 'padding:9px 14px;background:linear-gradient(135deg,#0a2342,#0d4b8a);display:flex;align-items:center;gap:8px;';
+        $S_TEMPS = 'display:flex;padding:12px 10px;gap:0;border-bottom:1px solid #1e2433;background:#111620;';
+        $S_TBLOC = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;';
+        $S_TVAL  = 'color:#fff;font-size:22px;font-weight:800;line-height:1;';
+        $S_TLBL  = 'color:#5a7a9a;font-size:9px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-top:2px;';
+        $S_DIVID = 'width:1px;background:#1e2433;margin:0 2px;align-self:stretch;';
+        $S_PRESE = 'display:flex;gap:6px;padding:9px 14px;background:#111620;border-bottom:1px solid #1e2433;';
+        $S_FOOT  = 'padding:6px 14px;background:#0a0e17;display:flex;align-items:center;gap:6px;';
+        $S_CBTN  = 'background:#1e2d4a;border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0;padding:0;';
+
+        // Bouton preset
+        $btnPreset = function($id, $fa, $label, $active) {
+            $on  = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px;border-radius:9px;cursor:pointer;text-decoration:none;gap:2px;background:linear-gradient(135deg,#1565c0,#0d47a1);border:1px solid #1e88e5;';
+            $off = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px;border-radius:9px;cursor:pointer;text-decoration:none;gap:2px;background:#1e2433;border:1px solid #252d3d;';
+            $ic  = $active ? 'color:#fff' : 'color:#2e3d55';
+            $lc  = $active ? 'color:#fff' : 'color:#2e3d55';
+            return '<a onclick="fluidraExecCmd(' . $id . ');return false;" style="' . ($active ? $on : $off) . '">'
+                 . '<i class="fas ' . $fa . '" style="font-size:15px;' . $ic . ';"></i>'
+                 . '<span style="font-size:9px;font-weight:700;' . $lc . ';">' . $label . '</span>'
+                 . '</a>';
+        };
+
+        // ── HTML ───────────────────────────────────────────────────────────────
+        $h = '';
+
+        // JS embarqué (une fois par page grâce au guard)
+        $h .= '<script>';
+        $h .= 'if(!window.fluidraExecCmd){window.fluidraExecCmd=function(id){';
+        $h .= '$.post(\'core/ajax/cmd.ajax.php\',{action:\'execCmd\',id:id,options:\'{}\'},null,\'json\');};} ';
+        $h .= 'if(!window.fluidraSetTemp){window.fluidraSetTemp=function(setId,infoId,delta){';
+        $h .= 'var sp=$(\'.cmd[data-id="\'+infoId+\'"]\').first();';
+        $h .= 'var cur=parseFloat(sp.text())||27;';
+        $h .= 'var nv=Math.min(40,Math.max(7,Math.round((cur+delta)*10)/10));';
+        $h .= 'sp.text(nv.toFixed(1));';
+        $h .= '$.post(\'core/ajax/cmd.ajax.php\',{action:\'execCmd\',id:setId,options:JSON.stringify({slider:nv})},null,\'json\');};} ';
+        $h .= '</script>';
+
+        // Carte
+        $h .= '<div class="eqLogic-widget cmd-widget ' . jeedom::versionAlias($_version) . '"';
+        $h .= ' data-eqLogic_id="' . $this->getId() . '" style="' . $S_CARD . '">';
+
+        // ─ En-tête ─
+        $btnStyle = 'padding:2px 8px;border-radius:20px;cursor:pointer;font-size:9px;font-weight:700;border:none;';
+        $h .= '<div style="' . $S_HDR . '">';
+        $h .= '<i class="fas fa-fire" style="color:#ff7043;font-size:14px;"></i>';
+        $h .= '<span style="color:#fff;font-size:12px;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' . htmlspecialchars($this->getName()) . '</span>';
+        if ($idOn && $idOff) {
+            $onBg  = $isOn  ? '#1b5e20' : '#37474f'; $onFg  = $isOn  ? '#69f0ae' : '#90a4ae';
+            $offBg = !$isOn ? '#b71c1c' : '#37474f'; $offFg = !$isOn ? '#ff8a80' : '#90a4ae';
+            $h .= '<button onclick="fluidraExecCmd(' . $idOn . ');return false;" style="' . $btnStyle . 'background:' . $onBg . ';color:' . $onFg . ';margin-right:3px;">ON</button>';
+            $h .= '<button onclick="fluidraExecCmd(' . $idOff . ');return false;" style="' . $btnStyle . 'background:' . $offBg . ';color:' . $offFg . ';">OFF</button>';
+        }
+        $h .= '</div>';
+
+        // ─ Températures ─
+        $h .= '<div style="' . $S_TEMPS . '">';
+
+        // Eau
+        $h .= '<div style="' . $S_TBLOC . '">';
+        $h .= '<i class="fas fa-water" style="color:#29b6f6;font-size:13px;"></i>';
+        if (is_object($cmdWaterTemp)) {
+            $h .= '<span class="cmd" data-id="' . $cmdWaterTemp->getId() . '" style="' . $S_TVAL . '">' . htmlspecialchars((string)$waterTemp) . '</span>';
+        } else {
+            $h .= '<span style="' . $S_TVAL . '">--</span>';
+        }
+        $h .= '<span style="' . $S_TLBL . '">Eau °C</span>';
+        $h .= '</div>';
+
+        $h .= '<div style="' . $S_DIVID . '"></div>';
+
+        // Air
+        $h .= '<div style="' . $S_TBLOC . '">';
+        $h .= '<i class="fas fa-wind" style="color:#80cbc4;font-size:13px;"></i>';
+        if (is_object($cmdAirTemp)) {
+            $h .= '<span class="cmd" data-id="' . $cmdAirTemp->getId() . '" style="' . $S_TVAL . ';font-size:18px;">' . htmlspecialchars((string)$airTemp) . '</span>';
+        } else {
+            $h .= '<span style="' . $S_TVAL . ';font-size:18px;">--</span>';
+        }
+        $h .= '<span style="' . $S_TLBL . '">Air °C</span>';
+        $h .= '</div>';
+
+        $h .= '<div style="' . $S_DIVID . '"></div>';
+
+        // Consigne (réglable)
+        $h .= '<div style="' . $S_TBLOC . '">';
+        $h .= '<i class="fas fa-crosshairs" style="color:#ffb300;font-size:13px;"></i>';
+        $h .= '<div style="display:flex;align-items:center;gap:3px;">';
+        $h .= '<button onclick="fluidraSetTemp(' . $idSetTemp . ',' . $idTargetTemp . ',-1);return false;" style="' . $S_CBTN . '">−</button>';
+        if (is_object($cmdTargetTemp)) {
+            $h .= '<span class="cmd" data-id="' . $cmdTargetTemp->getId() . '" style="' . $S_TVAL . ';font-size:18px;min-width:38px;text-align:center;">' . number_format($targetTemp, 1) . '</span>';
+        } else {
+            $h .= '<span style="' . $S_TVAL . ';font-size:18px;min-width:38px;text-align:center;">--</span>';
+        }
+        $h .= '<button onclick="fluidraSetTemp(' . $idSetTemp . ',' . $idTargetTemp . ',1);return false;" style="' . $S_CBTN . '">+</button>';
+        $h .= '</div>';
+        $h .= '<span style="' . $S_TLBL . '">Consigne °C</span>';
+        $h .= '</div>';
+
+        $h .= '</div>'; // fin températures
+
+        // ─ Modes (Silence / Smart / Boost) ─
+        $h .= '<div style="' . $S_PRESE . '">';
+        $h .= $btnPreset($idPresetSil,   'fa-volume-off', 'Silence', $pActive['silence']);
+        $h .= $btnPreset($idPresetSmart, 'fa-brain',      'Smart',   $pActive['smart']);
+        $h .= $btnPreset($idPresetBoost, 'fa-rocket',     'Boost',   $pActive['boost']);
+        $h .= '</div>';
+
+        // ─ Pied de carte ─
+        $h .= '<div style="' . $S_FOOT . '">';
+        $h .= '<span style="width:7px;height:7px;border-radius:50%;background:' . $stateColor . ';display:inline-block;flex-shrink:0;"></span>';
+        $h .= '<span style="color:#5a7a9a;font-size:10px;">' . htmlspecialchars($stateLabel) . '</span>';
+        $h .= '</div>';
+
+        $h .= '</div>'; // fin carte
+        return $h;
+    }
+
     public function postSave() {
         // Rien de spécial
     }
