@@ -625,6 +625,8 @@ class fluidrapool extends eqLogic {
         // ── HTML ───────────────────────────────────────────────────────────────
         $h = '';
 
+        $eqId = intval($this->getId());
+
         // JS embarqué (une fois par page grâce au guard)
         $h .= '<script>';
         $h .= 'if(!window.fluidraExecCmd){window.fluidraExecCmd=function(id){';
@@ -635,6 +637,14 @@ class fluidrapool extends eqLogic {
         $h .= 'var nv=Math.min(40,Math.max(7,Math.round((cur+delta)*10)/10));';
         $h .= 'sp.text(nv.toFixed(1));';
         $h .= '$.post(\'core/ajax/cmd.ajax.php\',{action:\'execCmd\',id:setId,options:JSON.stringify({slider:nv})},null,\'json\');};} ';
+        // MutationObserver : force 1 décimale sur les spans marqués data-fp-fmt="1d"
+        $h .= '$(function(){';
+        $h .= '$("[data-eqLogic_id=\\"' . $eqId . '\\"] .cmd[data-fp-fmt=\\"1d\\"]").each(function(){';
+        $h .= 'var el=this;';
+        $h .= 'function fmt(){var v=parseFloat(el.textContent);if(!isNaN(v))el.textContent=v.toFixed(1);}';
+        $h .= 'fmt();';
+        $h .= 'new MutationObserver(fmt).observe(el,{childList:true,characterData:true,subtree:true});';
+        $h .= '});});';
         $h .= '</script>';
 
         // Carte
@@ -661,7 +671,8 @@ class fluidrapool extends eqLogic {
         $h .= '<div style="' . $S_TBLOC . '">';
         $h .= '<i class="fas fa-water" style="color:#29b6f6;font-size:13px;"></i>';
         if (is_object($cmdWaterTemp)) {
-            $h .= '<span class="cmd" data-id="' . $cmdWaterTemp->getId() . '" style="' . $S_TVAL . '">' . htmlspecialchars((string)$waterTemp) . '</span>';
+            $wDisplay = is_numeric($waterTemp) ? number_format((float)$waterTemp, 1) : '--';
+            $h .= '<span class="cmd" data-id="' . $cmdWaterTemp->getId() . '" data-fp-fmt="1d" style="' . $S_TVAL . '">' . $wDisplay . '</span>';
         } else {
             $h .= '<span style="' . $S_TVAL . '">--</span>';
         }
@@ -674,7 +685,8 @@ class fluidrapool extends eqLogic {
         $h .= '<div style="' . $S_TBLOC . '">';
         $h .= '<i class="fas fa-wind" style="color:#80cbc4;font-size:13px;"></i>';
         if (is_object($cmdAirTemp)) {
-            $h .= '<span class="cmd" data-id="' . $cmdAirTemp->getId() . '" style="' . $S_TVAL . ';font-size:18px;">' . htmlspecialchars((string)$airTemp) . '</span>';
+            $aDisplay = is_numeric($airTemp) ? number_format((float)$airTemp, 1) : '--';
+            $h .= '<span class="cmd" data-id="' . $cmdAirTemp->getId() . '" data-fp-fmt="1d" style="' . $S_TVAL . ';font-size:18px;">' . $aDisplay . '</span>';
         } else {
             $h .= '<span style="' . $S_TVAL . ';font-size:18px;">--</span>';
         }
