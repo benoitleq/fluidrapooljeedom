@@ -1,0 +1,50 @@
+# Fichiers de configuration locaux (NE JAMAIS versionner)
+*.env
+*.local
+config.local.*
+secrets.*
+
+# Caches token et credentials (SENSIBLE — jamais dans git)
+resources/token_cache.json
+resources/*.json
+/tmp/
+
+# Jeedom : fichiers générés localement
+core/config/
+data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+.venv/
+venv/
+env/
+ENV/
+
+# Jeedom Claude Code settings
+.claude/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.bak
+*.orig

@@ -1,0 +1,13 @@
+{
+    "id": "fluidrapool",
+    "name": "Fluidra Pool",
+    "description": "Plugin pour gérer votre piscine connectée Fluidra : pompe à chaleur, pompe, électrolyseur, éclairage via le cloud Fluidra Connect.",
+    "licence": "AGPL",
+    "author": "Community",
+    "require": "4.4",
+    "category": "home automation protocol",
+    "changelog": "https://github.com/benoitleq/fluidrapooljeedom/blob/main/CHANGELOG.md",
+    "documentation": "https://github.com/benoitleq/fluidrapooljeedom/blob/main/README.md",
+    "language": "",
+    "compatibility": ""
+}
