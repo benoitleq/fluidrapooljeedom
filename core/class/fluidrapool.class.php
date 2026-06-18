@@ -53,14 +53,7 @@ class fluidrapool extends eqLogic {
         return 'python3';
     }
 
-    private static function callApi(array $args) {
-        $email    = config::byKey('email', 'fluidrapool', '');
-        $password = config::byKey('password', 'fluidrapool', '');
-
-        if (empty($email) || empty($password)) {
-            throw new Exception('Identifiants Fluidra non configurés');
-        }
-
+    private static function runScript(string $email, string $password, array $args): array {
         $scriptPath = dirname(__FILE__) . '/../../resources/fluidra_api.py';
         $tmpDir     = jeedom::getTmpFolder('fluidrapool');
         if (!is_dir($tmpDir)) {
@@ -72,7 +65,7 @@ class fluidrapool extends eqLogic {
         $cmdArgs = array_merge([
             escapeshellarg($python),
             escapeshellarg($scriptPath),
-            '--email',    escapeshellarg($email),
+            '--email',      escapeshellarg($email),
             '--token-file', escapeshellarg($tokenFile),
         ], $args);
 
@@ -84,15 +77,33 @@ class fluidrapool extends eqLogic {
             $err = @file_get_contents('/tmp/fluidrapool_error.log');
             throw new Exception('Pas de réponse du script Python. ' . $err);
         }
-
         $data = json_decode($output, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Réponse invalide du script : ' . substr($output, 0, 300));
+            throw new Exception('Réponse invalide : ' . substr($output, 0, 300));
         }
         if (isset($data['error'])) {
             throw new Exception($data['error']);
         }
         return $data;
+    }
+
+    private static function callApi(array $args): array {
+        $email    = config::byKey('email', 'fluidrapool', '');
+        $password = config::byKey('password', 'fluidrapool', '');
+        if (empty($email) || empty($password)) {
+            throw new Exception('Identifiants Fluidra non configurés. Allez dans la configuration du plugin.');
+        }
+        return self::runScript($email, $password, $args);
+    }
+
+    public static function testConnection(string $email, string $password): string {
+        $data      = self::runScript($email, $password, ['--action', 'get_all']);
+        $nbPools   = count($data['pools'] ?? []);
+        $nbDevices = 0;
+        foreach ($data['pools'] ?? [] as $pool) {
+            $nbDevices += count($pool['devices'] ?? []);
+        }
+        return "Connexion réussie ! {$nbPools} piscine(s), {$nbDevices} appareil(s) trouvé(s).";
     }
 
     // ------ Découverte et synchro des équipements ------

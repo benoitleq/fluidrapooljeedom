@@ -1,7 +1,7 @@
 /* Plugin Fluidra Pool — JavaScript Jeedom Desktop */
 "use strict";
 
-/* Affichage d'un équipement dans la liste de gauche */
+/* Affichage d'un équipement depuis la liste de gauche */
 $('#ul_eqLogic').on('click', 'a', function () {
     var id = $(this).attr('id');
     if (!id) return;
@@ -24,7 +24,7 @@ $('#ul_eqLogic').on('click', 'a', function () {
     });
 });
 
-/* Sauvegarde */
+/* Sauvegarde via le framework Jeedom */
 $('.eqLogicAction[data-action="save"]').on('click', function () {
     var eqLogic = $('.eqLogic').getValues('.eqLogicAttr');
     eqLogic.configuration = $('.eqLogic').getValues('.configKey');
@@ -39,29 +39,30 @@ $('.eqLogicAction[data-action="save"]').on('click', function () {
     });
 });
 
-/* Découverte automatique des appareils Fluidra */
+/* Découverte automatique — via core/ajax/plugin.ajax.php (framework Jeedom) */
 $('#bt_discoverDevices').on('click', function () {
     var btn = $(this);
     btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{Découverte en cours…}}');
     $.ajax({
         type: 'POST',
-        url: 'plugins/fluidrapool/core/ajax/fluidrapool.ajax.php',
+        url: 'core/ajax/plugin.ajax.php',
+        dataType: 'json',
         data: {
+            plugin: 'fluidrapool',
             action: 'discoverDevices'
         },
-        dataType: 'json',
         success: function (data) {
             if (data.state === 'ok') {
-                toastr.success('{{Découverte terminée ! Rechargement de la page…}}');
-                setTimeout(function () { window.location.reload(); }, 1500);
+                toastr.success(data.result + ' — {{Rechargement…}}');
+                setTimeout(function () { window.location.reload(); }, 2000);
             } else {
                 toastr.error('{{Erreur : }}' + data.result);
+                btn.prop('disabled', false).html('<i class="fas fa-search"></i> {{Découvrir les appareils}}');
             }
         },
         error: function (jqXHR) {
-            toastr.error('{{Erreur AJAX : }}' + jqXHR.responseText);
-        },
-        complete: function () {
+            var msg = jqXHR.responseText || jqXHR.statusText;
+            toastr.error('{{Erreur AJAX : }}' + msg);
             btn.prop('disabled', false).html('<i class="fas fa-search"></i> {{Découvrir les appareils}}');
         }
     });
@@ -73,17 +74,21 @@ $('#bt_refreshAllEquipments').on('click', function () {
     btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{Rafraîchissement…}}');
     $.ajax({
         type: 'POST',
-        url: 'plugins/fluidrapool/core/ajax/fluidrapool.ajax.php',
+        url: 'core/ajax/plugin.ajax.php',
+        dataType: 'json',
         data: {
+            plugin: 'fluidrapool',
             action: 'refreshAll'
         },
-        dataType: 'json',
         success: function (data) {
             if (data.state === 'ok') {
-                toastr.success('{{Mise à jour effectuée}}');
+                toastr.success(data.result);
             } else {
                 toastr.error('{{Erreur : }}' + data.result);
             }
+        },
+        error: function (jqXHR) {
+            toastr.error('{{Erreur AJAX : }}' + jqXHR.responseText);
         },
         complete: function () {
             btn.prop('disabled', false).html('<i class="fas fa-sync"></i> {{Tout rafraîchir}}');
@@ -91,21 +96,22 @@ $('#bt_refreshAllEquipments').on('click', function () {
     });
 });
 
-/* Rafraîchir l'équipement courant */
+/* Rafraîchir l'équipement affiché */
 $('#bt_refreshEquipment').on('click', function () {
     var id = $('.eqLogicAttr[data-l1key="id"]').val();
     if (!id) { toastr.warning('{{Sauvegardez d\'abord l\'équipement}}'); return; }
     $.ajax({
         type: 'POST',
-        url: 'plugins/fluidrapool/core/ajax/fluidrapool.ajax.php',
+        url: 'core/ajax/plugin.ajax.php',
+        dataType: 'json',
         data: {
+            plugin: 'fluidrapool',
             action: 'refreshEq',
             id: id
         },
-        dataType: 'json',
         success: function (data) {
             if (data.state === 'ok') {
-                toastr.success('{{Mis à jour}}');
+                toastr.success(data.result);
             } else {
                 toastr.error('{{Erreur : }}' + data.result);
             }
@@ -113,7 +119,7 @@ $('#bt_refreshEquipment').on('click', function () {
     });
 });
 
-/* Affichage de l'onglet Commandes */
+/* Chargement de l'onglet Commandes */
 $('.nav-tabs a').on('shown.bs.tab', function (e) {
     if ($(e.target).attr('href') === '#eqlogictab2') {
         var id = $('.eqLogicAttr[data-l1key="id"]').val();
