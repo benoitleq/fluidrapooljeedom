@@ -87,7 +87,7 @@ class fluidrapool extends eqLogic {
         return $data;
     }
 
-    private static function callApi(array $args): array {
+    public static function callApi(array $args): array {
         $email    = config::byKey('email', 'fluidrapool', '');
         $password = config::byKey('password', 'fluidrapool', '');
         if (empty($email) || empty($password)) {
@@ -439,111 +439,7 @@ class fluidrapool extends eqLogic {
         $this->checkAndUpdateCmd('chlor_status', $isOn);
     }
 
-    // ------ Exécution des commandes ------
-
-    public function execute($_options = []) {
-        $cmd = $this;
-        if (!($cmd instanceof fluidrapoolCmd)) return;
-
-        $logicalId = $cmd->getLogicalId();
-        $eqLogic   = $cmd->getEqLogic();
-        $deviceId  = $eqLogic->getConfiguration('device_id', '');
-        $deviceType = $eqLogic->getConfiguration('device_type', '');
-
-        $args = ['--device-id', escapeshellarg($deviceId)];
-
-        switch ($logicalId) {
-            // Pompe
-            case 'pump_on':
-                self::callApi(array_merge($args, ['--action', 'pump_on']));
-                break;
-            case 'pump_off':
-                self::callApi(array_merge($args, ['--action', 'pump_off']));
-                break;
-            case 'pump_speed_low':
-                self::callApi(array_merge($args, ['--action', 'set_pump_speed', '--value', '0']));
-                break;
-            case 'pump_speed_med':
-                self::callApi(array_merge($args, ['--action', 'set_pump_speed', '--value', '1']));
-                break;
-            case 'pump_speed_high':
-                self::callApi(array_merge($args, ['--action', 'set_pump_speed', '--value', '2']));
-                break;
-            case 'pump_auto_on':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '10', '--value', '1']));
-                break;
-            case 'pump_auto_off':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '10', '--value', '0']));
-                break;
-
-            // PAC
-            case 'hp_on':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '13', '--value', '1']));
-                break;
-            case 'hp_off':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '13', '--value', '0']));
-                break;
-            case 'hp_set_temp':
-                $temp   = (float)($_options['slider'] ?? 25);
-                $raw    = (int)($temp * 10);
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '15', '--value', (string)$raw]));
-                break;
-            case 'hp_mode_heat':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '16', '--value', '0']));
-                break;
-            case 'hp_mode_cool':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '16', '--value', '1']));
-                break;
-            case 'hp_mode_auto':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '16', '--value', '2']));
-                break;
-            case 'hp_preset_silence':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '17', '--value', '0']));
-                break;
-            case 'hp_preset_smart':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '17', '--value', '1']));
-                break;
-            case 'hp_preset_boost':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '17', '--value', '2']));
-                break;
-
-            // Lumière
-            case 'light_on':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '11', '--value', '1']));
-                break;
-            case 'light_off':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '11', '--value', '0']));
-                break;
-            case 'light_set_brightness':
-                $bri = (int)($_options['slider'] ?? 50);
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '17', '--value', (string)$bri]));
-                break;
-
-            // Électrolyseur
-            case 'chlor_on':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '9', '--value', '1']));
-                break;
-            case 'chlor_off':
-                self::callApi(array_merge($args, ['--action', 'set_component', '--component', '9', '--value', '0']));
-                break;
-
-            // Rafraîchir
-            case 'pump_refresh':
-            case 'hp_refresh':
-            case 'light_refresh':
-            case 'chlor_refresh':
-            case 'device_refresh':
-            case 'pool_refresh':
-                $eqLogic->refreshData();
-                break;
-        }
-
-        // Mise à jour de l'état après action
-        if (!in_array($logicalId, ['pump_refresh', 'hp_refresh', 'light_refresh', 'chlor_refresh', 'device_refresh', 'pool_refresh'])) {
-            sleep(2);
-            $eqLogic->refreshData();
-        }
-    }
+    // ------ Exécution des commandes (délégué à fluidrapoolCmd::execute) ------
 
     // ------ Widget dashboard (toHtml) ------
 
@@ -743,7 +639,102 @@ class fluidrapoolCmd extends cmd {
 
     public function execute($_options = []) {
         if ($this->getType() !== 'action') return;
-        $eqLogic = $this->getEqLogic();
-        $eqLogic->execute($_options);
+
+        $logicalId  = $this->getLogicalId();
+        $eqLogic    = $this->getEqLogic();
+        $deviceId   = $eqLogic->getConfiguration('device_id', '');
+        $args       = ['--device-id', escapeshellarg($deviceId)];
+        $refreshes  = ['pump_refresh','hp_refresh','light_refresh','chlor_refresh','device_refresh','pool_refresh'];
+
+        switch ($logicalId) {
+            // Pompe
+            case 'pump_on':
+                fluidrapool::callApi(array_merge($args, ['--action', 'pump_on']));
+                break;
+            case 'pump_off':
+                fluidrapool::callApi(array_merge($args, ['--action', 'pump_off']));
+                break;
+            case 'pump_speed_low':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_pump_speed', '--value', '0']));
+                break;
+            case 'pump_speed_med':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_pump_speed', '--value', '1']));
+                break;
+            case 'pump_speed_high':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_pump_speed', '--value', '2']));
+                break;
+            case 'pump_auto_on':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '10', '--value', '1']));
+                break;
+            case 'pump_auto_off':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '10', '--value', '0']));
+                break;
+
+            // PAC
+            case 'hp_on':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '21', '--value', '1']));
+                break;
+            case 'hp_off':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '21', '--value', '0']));
+                break;
+            case 'hp_set_temp':
+                $temp = (float)($_options['slider'] ?? 25);
+                $raw  = (int)($temp * 10);
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '15', '--value', (string)$raw]));
+                break;
+            case 'hp_mode_heat':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '16', '--value', '0']));
+                break;
+            case 'hp_mode_cool':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '16', '--value', '1']));
+                break;
+            case 'hp_mode_auto':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '16', '--value', '2']));
+                break;
+            case 'hp_preset_silence':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '17', '--value', '0']));
+                break;
+            case 'hp_preset_smart':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '17', '--value', '1']));
+                break;
+            case 'hp_preset_boost':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '17', '--value', '2']));
+                break;
+
+            // Lumière
+            case 'light_on':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '11', '--value', '1']));
+                break;
+            case 'light_off':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '11', '--value', '0']));
+                break;
+            case 'light_set_brightness':
+                $bri = (int)($_options['slider'] ?? 50);
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '17', '--value', (string)$bri]));
+                break;
+
+            // Électrolyseur
+            case 'chlor_on':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '9', '--value', '1']));
+                break;
+            case 'chlor_off':
+                fluidrapool::callApi(array_merge($args, ['--action', 'set_component', '--component', '9', '--value', '0']));
+                break;
+
+            // Rafraîchir
+            case 'pump_refresh':
+            case 'hp_refresh':
+            case 'light_refresh':
+            case 'chlor_refresh':
+            case 'device_refresh':
+            case 'pool_refresh':
+                $eqLogic->refreshData();
+                break;
+        }
+
+        if (!in_array($logicalId, $refreshes)) {
+            sleep(2);
+            $eqLogic->refreshData();
+        }
     }
 }
